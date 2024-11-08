@@ -5,21 +5,15 @@ from jetbot import Robot
 from SCSCtrl import TTLServo
 from queue import Queue
 from MyCamera import Camera
+from enum import Enum
 import time
 import paho.mqtt.client as mqtt
 import json
 import threading
 
-# class WorkType:
-#     PICKUP = 'pickup'
-#     DROPOFF = 'dropoff'
-    
-    # @classmethod
-    # def is_valid(cls, command: str) -> bool:
-    #     command_type = command.split(',')[0]
-    #     return command_type in [cls.PICKUP, cls.DROPOFF]
-
-class Status:
+class Status(Enum):
+    START = 'start'
+    DONE = 'done'
     MOVING = 'moving'
     WORKING = 'working'
     WAITING = 'waiting'
@@ -53,12 +47,14 @@ class AGV():
 
         self.topics = {
             'sub_topic' : {
+                'demon_status' : f'{self.robot_type}/Demon/Status/ToJetbot'
                 'demon_command': f'{self.idx}/jetbot/command',
                 'auto_mode': f'{self.idx}/AGV/auto_mode',
                 'qt_control': f'{self.idx}/AGV/control',
-                'qt_command': f'{self.idx}/AGV/command'
+                'qt_command': f'{self.idx}/AGV/command',
                 },
             'pub_topic' : {
+                'demon_status' : f'{self.robot_type}/Demon/Status/ToDemon',
                 'qt_streaming' : f'{self.idx}/AGV/camera'
             },
         }
@@ -93,12 +89,7 @@ class AGV():
         try:
             print(msg.topic, msg.payload)
             if msg.topic == self.topics['sub_topic']['demon_command']:
-                command = msg.payload.decode().strip().lower()
-                # if WorkType.is_valid(command):
-                # 명령어를 타입과 위치로 분리
-                # parts = command.split()
-                # work_type = parts[0]
-                # workspace = parts[1] if len(parts) > 1 else None
+                # command = msg.payload.decode().strip().lower()
 
                 work_info = {
                     'destination': command['destination'],
@@ -107,8 +98,10 @@ class AGV():
                 
                 self.work_queue.put(work_info)
                 print(f'작업 추가됨: {work_info['item']} at {work_info['destination']}')
-                # else:
-                #     print(f'잘못된 작업 타입: {command}')
+            
+            elif msg.topic == self.topics['sub_topic']['demon_status']:
+                self.client.publish(self.topics['pub_topic']['demon_status'], self.status.value)
+                print(f'상태 전송 완료: {self.status.value}')
 
             elif msg.topic == self.topics['sub_topic']['qt_control']:
                 command = msg.payload.decode("utf-8")
@@ -145,12 +138,16 @@ class AGV():
                 work_info = self.work_queue.get(timeout=5)
                 print(f'새로운 작업 시작: {work_info['item']} at {work_info['destination']}')
                 
+                self.status = Status.START
                 self.start_threads(work_info)
-                
+
                 # 작업 완료 표시
                 self.work_queue.task_done()
+                self.status = Status.DONE 
+                self.status = Status.WAITING
+
             except self.work_queue.Empty:
-                print('작업 큐가 비어있습니다.')
+                print('5초 내 존재하는 작업이 없습니다.')
                 return
             except Exception as e:
                 print(f'작업 처리 중 오류 발생: {e}')
@@ -163,7 +160,7 @@ class AGV():
         self.status = Status.MOVING 
         
         item_color = work_info['item']['color']
-        target_color = self.common_work_space_color if self.robot_type == "B" else self.incoming_area_color
+        target_color = self.common_work_space_color if self.robot_type == "A" else self.incoming_area_color
         print(f'작업대 색상: {target_color}')
         self.execute_road_following(target_color)
         print(f'작업대 도착 완료!')
@@ -175,10 +172,12 @@ class AGV():
 
         
         self.status = Status.MOVING
-        target_color = work_info['destination']['color'] if self.robot_type == "B" else self.common_work_space_color
+        target_color = work_info['destination']['color'] if self.robot_type == "A" else self.common_work_space_color
         print(f'목표 위치 색상: {target_color}')
         self.execute_road_following(target_color)
         print(f'목표 위치 도착 완료!')
+
+        self.status = Status.WORKING
 
         # 로봇 동작
         # TODO: 박스 놓기 작업 수행 
@@ -186,6 +185,7 @@ class AGV():
 
     def execute_road_following_stop(self, target_color):
         stop_event = threading.Event()
+        stop_event.clear()
         # 새로운 쓰레드 객체 생성
         self.recog_working_area = RecogWorkingArea(self.robot_type, stop_event)
         self.road_following = RoadFollowing(self.robot_type, stop_event)
@@ -272,13 +272,13 @@ class AGV():
 
 
 if __name__ == '__main__':
-    agv = AGV("B")
     try:
+        agv = AGV("B")
         agv.subscribe()
-        streaming_thread = threading.Thread(target=agv.send_frame, daemon=True)
-        streaming_thread.start()
+        # streaming_thread = threading.Thread(target=agv.send_frame, daemon=True)
+        # streaming_thread.start()
         while True:
-            pass
+            agv.process_work()
     except KeyboardInterrupt:
         agv.terminate()
 
