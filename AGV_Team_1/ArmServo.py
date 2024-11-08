@@ -22,6 +22,8 @@ class AGVServo:
         for i in range(1, 6):
             TTLServo.servoAngleCtrl(i, self.motor_degree[i], self.dir, self.speed_motor)
         self.robot.stop()
+        self.robot_speed = 0.1
+        self.move_duration = 0.5
         self.initial_degree = init_degree
         self._initialized = True  # 초기화 상태를 기록하여 중복 초기화 방지
 
@@ -68,17 +70,17 @@ class AGVServo:
     def stop(self):
         self.robot.stop()
 
-    def move(self, direction, speed, duration):
+    def move(self, direction):
         if direction == "f" or direction == "F":
-            self.robot.forward(speed)
+            self.robot.forward(self.robot_speed)
         elif direction == "b" or direction == "B":
-            self.robot.backward(speed)
+            self.robot.backward(self.robot_speed)
         elif direction == "r" or direction == "R":
-            self.robot.right(speed)
+            self.robot.right(self.robot_speed)
         elif direction == "l" or direction == "L":
-            self.robot.left(speed)
+            self.robot.left(self.robot_speed)
 
-        time.sleep(duration)
+        time.sleep(self.move_duration)
         self.stop()
 
     def __del__(self):
