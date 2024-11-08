@@ -109,5 +109,10 @@ class AGVTeamTwoServo(AGVServo):
         return cls._instance
 
     def __init__(self):
+        # 하드 코딩 시
+        # 맵으로부터 작업대가 37cm, 작업대 오른쪽으로부터 박스가 27cm
+        
         self.initial_degree = [-1, 6, 11, 7, 0, 4]
+        self.grap_box_degree = [-1, 6, -73, -60, 0, 4]
+        self.grap_degree = 27
         super().__init__(self.initial_degree)
