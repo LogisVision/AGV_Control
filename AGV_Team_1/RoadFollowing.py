@@ -8,13 +8,14 @@ from ArmServo import *
 from SteeringModel import *
 
 class RoadFollowing(threading.Thread):
-    def __init__(self, idx, stop_event):
+    def __init__(self, robot_type, stop_event):
         super().__init__()
         self.steering_model = SteeringModel()
 
         # Peripheral
         self.camera = Camera.instance()
-        self.servo = AGVTeamOneServo() if idx == 1 else AGVTeamTwoServo()
+        self.robot_type = robot_type
+        self.servo = AGVTeamOneServo() if robot_type == "A" else AGVTeamTwoServo()
         # Camera angle should be set with data collection environment
         self.servo.operate_arm(5, -55)
 

@@ -2,8 +2,9 @@ from ArmServo import *
 import threading
 
 class Tracking(threading.Thread):
-    def __init__(self, idx):
-        self.servo = AGVTeamOneServo() if idx == 1 else AGVTeamTwoServo()
+    def __init__(self, robot_type):
+        self.servo = AGVTeamOneServo() if robot_type == "A" else AGVTeamTwoServo()
+        self.robot_type = robot_type
         self.threshold_x = 0
         self.threshold_y = 0
         self.offset_x = 0

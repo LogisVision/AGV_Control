@@ -6,10 +6,11 @@ from MyCamera import Camera
 from ArmServo import *
 
 class RecogWorkingArea(threading.Thread):
-    def __init__(self, idx, stop_event):
+    def __init__(self, robot_type, stop_event):
         super().__init__()
         self.working_areas = ['yellow']
         self.is_find_color = False
+        self.robot_type = robot_type
         # Colors HSV range
         # index 0 : lower range
         # index 1 : upper range
@@ -24,7 +25,7 @@ class RecogWorkingArea(threading.Thread):
         }
 
         self.camera = Camera.instance()
-        self.servo = AGVTeamOneServo() if idx == 1 else AGVTeamTwoServo()
+        self.servo = AGVTeamOneServo() if robot_type == "A" else AGVTeamTwoServo()
         self.servo.operate_arm(5, -55)
 
         self.frame_width = self.camera.width

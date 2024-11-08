@@ -10,14 +10,14 @@ import paho.mqtt.client as mqtt
 import json
 import threading
 
-class WorkType:
-    PICKUP = 'pickup'
-    DROPOFF = 'dropoff'
+# class WorkType:
+#     PICKUP = 'pickup'
+#     DROPOFF = 'dropoff'
     
-    @classmethod
-    def is_valid(cls, command: str) -> bool:
-        command_type = command.split(',')[0]
-        return command_type in [cls.PICKUP, cls.DROPOFF]
+    # @classmethod
+    # def is_valid(cls, command: str) -> bool:
+    #     command_type = command.split(',')[0]
+    #     return command_type in [cls.PICKUP, cls.DROPOFF]
 
 class Status:
     MOVING = 'moving'
@@ -25,14 +25,17 @@ class Status:
     WAITING = 'waiting'
 
 class AGV():
-    def __init__(self, idx):
+    def __init__(self, robot_type):
         self.idx = idx
 
         # 작업 큐 생성
         self.work_queue = Queue()
+        self.robot_type = robot_type
 
-        self.servo = AGVTeamOneServo() if idx == 1 else AGVTeamTwoServo()
-        
+        self.robot_type = robot_type
+        self.servo = AGVTeamOneServo() if robot_type == "A" else AGVTeamTwoServo()
+        self.servo.reset_degree()
+
         self.camera = Camera.instance()
 
         self.auto_mode_active = False
@@ -46,11 +49,15 @@ class AGV():
         self.client.on_message = self.on_message
 
         self.topics = {
-            'demon_command': 'jetbot/command',
-            'auto_mode': 'AGV/auto_mode',
-            'qt_control': 'AGV/control',
-            'qt_command': 'AGV/command',
-            'qt_streaming' : 'AGV/camera2'
+            'sub_topic' : {
+                'demon_command': f'{self.idx}/jetbot/command',
+                'auto_mode': f'{self.idx}/AGV/auto_mode',
+                'qt_control': f'{self.idx}/AGV/control',
+                'qt_command': f'{self.idx}/AGV/command'
+                },
+            'pub_topic' : {
+                'qt_streaming' : f'{self.idx}/AGV/camera'
+            },
         }
 
         try:
@@ -62,10 +69,9 @@ class AGV():
 
     def subscribe(self):
         try:
-            self.client.subscribe('jetbot/command', 1) 
-            self.client.subscribe('AGV/control', 1)
-            self.client.subscribe('AGV/command', 1)
-            self.client.subscribe('AGV/auto_mode', 1)
+            for topic in self.topics['sub_topic'].values():
+                self.client.subscribe(topic, 1)
+                print(f'구독 {topic} !')
             print('구독 완료')
             return True
         except Exception as e:
@@ -83,25 +89,26 @@ class AGV():
     def on_message(self, client, userdata, msg):
         try:
             print(msg.topic, msg.payload)
-            if msg.topic == self.topics['demon_command']:
+            if msg.topic == self.topics['sub_topic']['demon_command']:
                 command = msg.payload.decode().strip().lower()
-                if WorkType.is_valid(command):
-                    # 명령어를 타입과 위치로 분리
-                    parts = command.split()
-                    work_type = parts[0]
-                    workspace = parts[1] if len(parts) > 1 else None
-                    
-                    work_info = {
-                    'type': work_type,
-                        'workspace': workspace
-                    }
-                    
-                    self.work_queue.put(work_info)
-                    print(f'작업 추가됨: {work_type} at {workspace}')
-                else:
-                    print(f'잘못된 작업 타입: {command}')
+                # if WorkType.is_valid(command):
+                # 명령어를 타입과 위치로 분리
+                # parts = command.split()
+                # work_type = parts[0]
+                # workspace = parts[1] if len(parts) > 1 else None
+                if 
 
-            elif msg.topic == self.topics['qt_control']:
+                work_info = {
+                    'destination': command['destination'],
+                    'item': command['item']
+                }
+                
+                self.work_queue.put(work_info)
+                print(f'작업 추가됨: {work_type} at {workspace}')
+                # else:
+                #     print(f'잘못된 작업 타입: {command}')
+
+            elif msg.topic == self.topics['sub_topic']['qt_control']:
                 command = msg.payload.decode("utf-8")
                 if command == "AUTO_ON":
                     self.auto_mode_active = True
@@ -112,14 +119,15 @@ class AGV():
                     self.auto_mode_active = False
                     self.auto_move_camera.stop()
                     self.auto_move_camera.join()
-
-            elif msg.topic == self.topics['auto_mode']:
+            
+            # 디버깅용
+            elif msg.topic == self.topics['sub_topic']['auto_mode']:
                 if self.auto_mode_active:
                     data = json.loads(msg.payload.decode("utf-8"))
                     self.auto_move_camera.offset_x = data.get("offset_x", 0)
                     self.auto_move_camera.offset_y = data.get("offset_y", 0)
 
-            elif msg.topic == self.topics['qt_command'] and not self.auto_mode_active:
+            elif msg.topic == self.topics['sub_topic']['qt_command'] and not self.auto_mode_active:
                 if self.status == Status.WAITING:
                     self.handle_manual_commands(msg.payload.decode("utf-8"))
                 else: 
@@ -129,7 +137,7 @@ class AGV():
             print(f'메시지 처리 중 오류 발생: {e}')
         
     def process_work(self):
-        while self.status == Status.WAITING:
+        if self.status == Status.WAITING:
             try:
                 # Queue에서 작업 가져오기 (작업이 없으면 대기)
                 work_info = self.work_queue.get(timeout=5)
@@ -142,10 +150,11 @@ class AGV():
                 # 작업 완료 표시
                 self.work_queue.task_done()
             except self.work_queue.Empty:
-                continue
+                print('작업 큐가 비어있습니다.')
+                return
             except Exception as e:
                 print(f'작업 처리 중 오류 발생: {e}')
-                continue
+                return
 
     def start_threads(self, work_info):
         # TODO : Requires Test
@@ -193,7 +202,7 @@ class AGV():
         while self.th_streaming_flag:
             _, buffer = cv2.imencode('.jpg', self.camera.value, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
             jpg_as_text = buffer.tobytes()
-            self.client.publish(self.topics['qt_streaming'], jpg_as_text)
+            self.client.publish(self.topics['pub_topic']['qt_streaming'], jpg_as_text)
             
 
     def stop_send_frame(self):
