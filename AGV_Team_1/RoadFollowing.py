@@ -9,12 +9,12 @@ from MyCamera import Camera
 from ArmServo import *
 
 class RoadFollowing(threading.Thread):
-    def __init__(self, idx):
+    def __init__(self, idx, stop_event):
         super().__init__()
         # Model Variable
         self.model = torchvision.models.resnet18(pretrained=True)
         self.model.fc = torch.nn.Linear(512, 2)
-        self.model.load_state_dict(torch.load('road_following/best_road_following_model.pth'))
+        self.model.load_state_dict(torch.load('best_steering_model_xy_test (2).pth'))
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.model = self.model.to(self.device)
@@ -26,16 +26,15 @@ class RoadFollowing(threading.Thread):
         # Peripheral
         self.camera = Camera.instance()
         self.servo = AGVTeamOneServo() if idx == 1 else AGVTeamTwoServo()
-
         # Camera angle should be set with data collection environment
-        self.servo.operate_arm(5, -20)
+        self.servo.operate_arm(5, -55)
 
         # Parameter for road following
-        self.speed_gain = 0.4
+        self.speed_gain = 0.3
         # Steering Coefficient
         self.steering_gain = 0.2
         # Differential Steering Coefficient
-        self.steering_dgain = 0.4
+        self.steering_dgain = 0.2
         self.steering_bias = 0.0
 
         # Angle for Turn
@@ -44,15 +43,18 @@ class RoadFollowing(threading.Thread):
 
         # Road Following Execute Flag
         self.th_flag = True
-
+        self.stop_event = stop_event
     def preprocess(self, image):
-        image = PIL.image.fromarray(image)
+        image = PIL.Image.fromarray(image)
         image = transforms.functional.to_tensor(image).to(self.device).half()
         image.sub_(self.mean[:, None, None]).div_(self.std[:, None, None])
         return image[None, ...]
 
+    def run(self):
+        self.execute_road_following()
+
     def execute_road_following(self):
-        while self.th_flag:
+        while self.th_flag and not self.stop_event.is_set():
             image = self.camera.value
             xy = self.model(self.preprocess(image)).detach().float().cpu().numpy().flatten()
             x = xy[0]

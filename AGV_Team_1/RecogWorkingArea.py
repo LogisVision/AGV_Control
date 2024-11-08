@@ -6,24 +6,26 @@ from MyCamera import Camera
 from ArmServo import *
 
 class RecogWorkingArea(threading.Thread):
-    def __init__(self, idx):
+    def __init__(self, idx, stop_event):
         super().__init__()
-        self.working_areas = ['red', 'blue']
+        self.working_areas = ['yellow']
+        self.is_find_color = False
         # Colors HSV range
         # index 0 : lower range
         # index 1 : upper range
         # Todo: Get Color Range
         self.colors_range = {
-            'red' : [np.array([0, 0, 0]), np.array([0, 0, 0])],
+            'red' : [np.array([2, 155, 178]), np.array([8, 175, 200])],
             'green' : [np.array([60, 110, 160]), np.array([75, 140, 180])],
             'blue' : [np.array([100, 130, 150]), np.array([140, 190, 190])],
-            'yellow' : [np.array([0, 0, 0]), np.array([0, 0, 0])],
+            'yellow' : [np.array([24, 180, 200]), np.array([30, 210, 220])],
             'orange' : [np.array([16, 220,190]), np.array([20, 255, 210])],
             'purple' : [np.array([110, 100, 140]), np.array([140, 140, 160])],
         }
 
         self.camera = Camera.instance()
         self.servo = AGVTeamOneServo() if idx == 1 else AGVTeamTwoServo()
+        self.servo.operate_arm(5, -55)
 
         self.frame_width = self.camera.width
         self.frame_height = self.camera.height
@@ -37,6 +39,8 @@ class RecogWorkingArea(threading.Thread):
 
         self.th_flag = True
         self.imageInput = 0
+
+        self.stop_event = stop_event
 
     def run(self):
         while self.th_flag:
@@ -63,6 +67,23 @@ class RecogWorkingArea(threading.Thread):
 
                 time.sleep(0.1)
 
+                # if self.is_find_color:
+                #     self.stop_event.set()
+                #     break
+                # if self.is_find_color and self.servo.motor_degree[5] > -50:
+                #     self.servo.operate_arm(5, -55)
+                #     while self.servo.motor_degree[5] != -55:
+                #         pass
+                #     break
+                
+                # if self.servo.motor_degree[5] <= -50:
+                #     self.stop_event.set()
+                #     self.servo.operate_arm(5, -20)
+                #     break
+
+                # self.is_find_color = False
+                
+
     def colorAction(self, Contours):
         # Find Biggest Area about Working area
         c = max(Contours, key=cv2.contourArea)
@@ -76,7 +97,15 @@ class RecogWorkingArea(threading.Thread):
         error_Y = abs(self.camera_center_y - Y)
         error_X = abs(self.camera_center_x - X)
 
+        self.stop_event.set()
+        # if error_Y < 15 and error_X < 15:
+        #     print(error_Y, error_X)
+        
+            # self.stop_event.set()
         # Todo: Define Action
+        # self.stop()
+        # print("Find Color!")
+        # self.is_find_color = True
 
     def stop(self):
         self.th_flag = False
