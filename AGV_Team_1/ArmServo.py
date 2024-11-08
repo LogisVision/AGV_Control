@@ -15,7 +15,7 @@ class AGVServo:
         if hasattr(self, '_initialized') and self._initialized:
             return
         self.speed_motor = 150
-        self.dir = -1
+        self.dir = 1
         self.motor_degree = init_degree.copy()
         self.sensitivity_degree = 5
         self.robot = Robot()
@@ -95,7 +95,7 @@ class AGVTeamOneServo(AGVServo):
         return cls._instance
 
     def __init__(self):
-        self.initial_degree = [-1, 8, 0, 0, 0, 0]
+        self.initial_degree = [-1, -8, 0, 0, 0, 0]
         super().__init__(self.initial_degree)
 
 
@@ -112,7 +112,7 @@ class AGVTeamTwoServo(AGVServo):
         # 하드 코딩 시
         # 맵으로부터 작업대가 37cm, 작업대 오른쪽으로부터 박스가 27cm
         
-        self.initial_degree = [-1, 6, 11, 7, 0, 4]
-        self.grap_box_degree = [-1, 6, -73, -60, 0, 4]
-        self.grap_degree = 27
+        self.initial_degree = [-1, -6, -11, -7, 0, -4]
+        self.grap_box_degree = [-1, -6, 73, 60, 0, -4]
+        self.grap_degree = -27
         super().__init__(self.initial_degree)
