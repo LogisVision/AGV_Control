@@ -3,10 +3,10 @@ from jetbot import Robot
 import time
 
 class AGVServo:
-    def __init__(self):
+    def __init__(self, init_degree):
         self.speed_motor = 150
         self.dir = -1
-        self.motor_degree = [-1, 0, 0, 0, 0, 0]
+        self.motor_degree = init_degree
         self.sensitivity_degree = 5
         self.robot = Robot()
         for i in range(1, 6):
@@ -60,11 +60,9 @@ class AGVServo:
 
 class AGVTeamOneServo(AGVServo):
     def __init__(self):
-        self.motor_degree = [-1, 8, 0, 0, 0, 0]
-        super().__init__()
+        super().__init__([-1, 8, 0, 0, 0, 0])
 
 class AGVTeamTwoServo(AGVServo):
     def __init__(self):
-        self.motor_degree = [-1, 6, 11, 7, 0, 4]
-        super().__init__()
+        super().__init__([-1, 6, 11, 7, 0, 4])
 
