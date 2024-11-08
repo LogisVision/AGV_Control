@@ -16,8 +16,8 @@ if __name__ == '__main__':
             stop_event.clear()
             
             # 매 반복마다 새로운 스레드 객체 생성
-            recog_working_area = RecogWorkingArea(2, stop_event)
-            road_following = RoadFollowing(2, stop_event)
+            recog_working_area = RecogWorkingArea("B", stop_event)
+            road_following = RoadFollowing("B", stop_event)
             
             # 현재 찾을 색상 설정
             recog_working_area.working_areas = [color[idx]]
