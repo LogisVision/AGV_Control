@@ -3,13 +3,12 @@ from jetbot import Robot
 import time
 
 class AGVServo:
-    speed_motor = 150
-    dir = -1
-    motor_degree = [-1, 0, 0, 0, 0, 0]
-    sensitivity_degree = 5
-    robot = Robot()
-
     def __init__(self):
+        self.speed_motor = 150
+        self.dir = -1
+        self.motor_degree = [-1, 0, 0, 0, 0, 0]
+        self.sensitivity_degree = 5
+        self.robot = Robot()
         for i in range(1, 6):
             TTLServo.servoAngleCtrl(i, self.motor_degree[i], self.dir, self.speed_motor)
         self.robot.stop()
