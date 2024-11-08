@@ -16,10 +16,10 @@ class RecogWorkingArea(threading.Thread):
         # Todo: Get Color Range
         self.colors_range = {
             'red' : [np.array([2, 155, 178]), np.array([8, 175, 200])],
-            'green' : [np.array([60, 110, 160]), np.array([75, 140, 180])],
+            'green' : [np.array([60, 120, 160]), np.array([75, 150, 180])],
             'blue' : [np.array([100, 130, 150]), np.array([140, 190, 190])],
-            'yellow' : [np.array([24, 180, 200]), np.array([30, 210, 220])],
-            'orange' : [np.array([16, 220,190]), np.array([20, 255, 210])],
+            'yellow' : [np.array([24, 70, 160]), np.array([32, 120, 220])],
+            'orange' : [np.array([12, 100,200]), np.array([20, 130, 220])],
             'purple' : [np.array([110, 100, 140]), np.array([140, 140, 160])],
         }
 
@@ -43,6 +43,7 @@ class RecogWorkingArea(threading.Thread):
         self.stop_event = stop_event
 
     def run(self):
+        self.find_time = None
         while self.th_flag:
             self.imageInput = self.camera.value
             hsv = cv2.cvtColor(self.imageInput, cv2.COLOR_BGR2HSV)
@@ -62,11 +63,18 @@ class RecogWorkingArea(threading.Thread):
                 Contours, _ = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
                 if Contours:
+                    self.find_time = time.time()
                     self.colorAction(Contours)
                     break
 
                 time.sleep(0.1)
 
+                # 1초 안에 색 못 찾으면 event 발생
+                if self.find_time is not None and time.time() - self.find_time > 1:
+                    self.stop_event.set()
+                    break
+                
+                self.is_find_color = False
                 # if self.is_find_color:
                 #     self.stop_event.set()
                 #     break
@@ -97,7 +105,8 @@ class RecogWorkingArea(threading.Thread):
         error_Y = abs(self.camera_center_y - Y)
         error_X = abs(self.camera_center_x - X)
 
-        self.stop_event.set()
+        self.is_find_color = True
+        # self.stop_event.set()
         # if error_Y < 15 and error_X < 15:
         #     print(error_Y, error_X)
         

@@ -34,11 +34,10 @@
 - Remote Control by QT Controller 
 - Get Distance between face and Camera 
 - Move arm following face 
-- Recognize Working Area
+- Recognize Working Area (Single, Multi Area)
 
 ## 진행중
 - Modularization
-- Recognize Working Area (Multi Area)
 - Demon Server Communication
 
 ## 해야할 것
