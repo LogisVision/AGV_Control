@@ -6,6 +6,7 @@ from SCSCtrl import TTLServo
 from queue import Queue
 from MyCamera import Camera
 from enum import Enum
+import threading
 import time
 import paho.mqtt.client as mqtt
 import json
@@ -24,7 +25,6 @@ class AGV():
 
         # 작업 큐 생성
         self.work_queue = Queue()
-        self.robot_type = robot_type
 
         self.robot_type = robot_type
         self.servo = AGVTeamOneServo() if robot_type == "A" else AGVTeamTwoServo()
@@ -32,6 +32,7 @@ class AGV():
         self.auto_move_camera = Tracking(robot_type)
 
         self.camera = Camera.instance()
+        self.camera_lock = threading.Lock()
 
         self.auto_mode_active = False
         self.status = Status.WAITING
@@ -94,6 +95,7 @@ class AGV():
             # print(msg.topic, msg.payload)
             if msg.topic == self.topics['sub_topic']['demon_command']:
                 # command = msg.payload.decode().strip().lower()
+                command = json.loads(msg.payload.decode())
                 """
                 demon server msg sample
                 B/Demon/Status/ToJetbot b'
@@ -133,13 +135,23 @@ class AGV():
             elif msg.topic == self.topics['sub_topic']['qt_calibrate_angle']:
                 if self.auto_mode_active:
                     data = json.loads(msg.payload.decode("utf-8"))
-                    if (abs(self.auto_move_camera.offset_x - self.auto_move_camera.mid_position_x) > self.auto_move_camera.th_x
-                     or abs(self.auto_move_camera.offset_y - self.auto_move_camera.mid_position_y) > self.auto_move_camera.th_y
-                      or abs(self.auto_move_camera.distance - self.auto_move_camera.th_distance) > 1):
-                        self.auto_move_camera.offset_x = data.get("offset_x", self.auto_move_camera.mid_position_x)
-                        self.auto_move_camera.offset_y = data.get("offset_y", self.auto_move_camera.mid_position_y)
-                        self.auto_move_camera.distance = data.get("distance", 100)
-                        self.auto_move_camera.tracking()    
+
+                    self.auto_move_camera.offset_x = data.get("offset_x", self.auto_move_camera.mid_position_x)
+                    self.auto_move_camera.offset_y = data.get("offset_y", self.auto_move_camera.mid_position_y)
+                    self.auto_move_camera.distance = data.get("distance", 100)
+
+                    self.camera_lock.acquire()
+                    self.auto_move_camera.tracking()    
+                    self.camera_lock.release()
+
+                    if (
+                        abs(self.auto_move_camera.offset_x - self.auto_move_camera.mid_position_x) <= self.auto_move_camera.th_x 
+                    and abs(self.auto_move_camera.offset_y - self.auto_move_camera.mid_position_y) <= self.auto_move_camera.th_y
+                    and abs(self.auto_move_camera.distance - self.auto_move_camera.th_distance) <= 1.0):
+                        self.auto_mode_active = False
+                        self.target_xy()
+
+
 
             elif msg.topic == self.topics['sub_topic']['qt_command'] and not self.auto_mode_active:
                 if self.status == Status.WAITING:
@@ -287,6 +299,21 @@ class AGV():
         self.client.loop_stop()
         self.client.disconnect()
         self.camera.stop()
+
+    def target_xy(self):
+        TTLServo.xyInputSmooth(242,-40, 2)
+        # Gripper 동작
+        time.sleep(3)
+        TTLServo.servoAngleCtrl(4, -36, 1, 150)
+        time.sleep(3)
+        TTLServo.xyInputSmooth(80, 80,2)
+        time.sleep(3)
+        TTLServo.xyInputSmooth(242,-40, 2)
+        time.sleep(3)
+        TTLServo.servoAngleCtrl(4, 80, 1, 150)
+        time.sleep(3)
+        TTLServo.xyInputSmooth(80, 80,2)
+        # print(f"Target (x, y): ({xInput}, {yInput}) reached.")
 
 
 if __name__ == '__main__':

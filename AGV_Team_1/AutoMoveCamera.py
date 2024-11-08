@@ -13,19 +13,19 @@ class Tracking(threading.Thread):
         self.offset_y = 0
         self.th_flag = True
         self.th_distance = 20
-        self.mid_position_x = 320
+        self.mid_position_x = 315
         self.mid_position_y = 240
         self.distance = 100
 
     def tracking(self):
         if abs(self.distance - self.th_distance) > 10:
-            self.servo.speed_motor = 0.2
+            self.servo.robot_speed = 0.4
         else:
-            self.servo.speed_motor = 0.1
-            
+            self.servo.robot_speed = 0.2
+
         if self.distance - self.th_distance > 1:
             self.servo.move("f")
-        elif self.distance - self.th_distance < -1:
+        elif self.distance < self.th_distance:
             self.servo.move("b")
 
         # 좌우 (turnAngle) 조정

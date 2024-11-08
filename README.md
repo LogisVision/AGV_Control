@@ -39,10 +39,10 @@
 ## 진행중
 - Modularization
 - Demon Server Communication
+- Get Distance from Box (Added)
+- Move arm following box (Added)
 
 ## 해야할 것
 - Carrying Boxes
-- Communication with Server
-- Get Distance from Box (Added)
-- Move arm following box (Added)
+- Consider Cross Position Box
 
