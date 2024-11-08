@@ -41,6 +41,9 @@ class AGV():
         self.auto_mode_active = False
         self.status = Status.WAITING
 
+        self.incoming_area_color = 'green'
+        self.common_work_space_color = 'yellow'
+
         self.th_streaming_flag = True
 
         # MQTT 클라이언트 설정
@@ -96,7 +99,6 @@ class AGV():
                 # parts = command.split()
                 # work_type = parts[0]
                 # workspace = parts[1] if len(parts) > 1 else None
-                if 
 
                 work_info = {
                     'destination': command['destination'],
@@ -104,7 +106,7 @@ class AGV():
                 }
                 
                 self.work_queue.put(work_info)
-                print(f'작업 추가됨: {work_type} at {workspace}')
+                print(f'작업 추가됨: {work_info['item']} at {work_info['destination']}')
                 # else:
                 #     print(f'잘못된 작업 타입: {command}')
 
@@ -141,9 +143,7 @@ class AGV():
             try:
                 # Queue에서 작업 가져오기 (작업이 없으면 대기)
                 work_info = self.work_queue.get(timeout=5)
-                work_type = work_info['type']
-                workspace = work_info['workspace']
-                print(f'새로운 작업 시작: {work_type} at {workspace}')
+                print(f'새로운 작업 시작: {work_info['item']} at {work_info['destination']}')
                 
                 self.start_threads(work_info)
                 
@@ -161,18 +161,35 @@ class AGV():
         # TODO : Define specific work
 
         self.status = Status.MOVING 
-
-        stop_event = threading.Event()
-        current_color = work_info['workspace']
-        current_work_type = work_info['type']
         
-        # 새로운 쓰레드 객체 생성
-        self.recog_working_area = RecogWorkingArea(self.idx, stop_event)
-        self.road_following = RoadFollowing(self.idx, stop_event)
+        item_color = work_info['item']['color']
+        target_color = self.common_work_space_color if self.robot_type == "B" else self.incoming_area_color
+        print(f'작업대 색상: {target_color}')
+        self.execute_road_following(target_color)
+        print(f'작업대 도착 완료!')
 
-        # 현재 찾을 색상 설정
-        self.recog_working_area.working_areas = [current_color]
-        print(f'찾고있는 색상: {current_color}')
+        self.status = Status.WORKING
+
+        # 로봇 동작
+        # TODO: 박스 잡기 작업 수행
+
+        
+        self.status = Status.MOVING
+        target_color = work_info['destination']['color'] if self.robot_type == "B" else self.common_work_space_color
+        print(f'목표 위치 색상: {target_color}')
+        self.execute_road_following(target_color)
+        print(f'목표 위치 도착 완료!')
+
+        # 로봇 동작
+        # TODO: 박스 놓기 작업 수행 
+
+
+    def execute_road_following_stop(self, target_color):
+        stop_event = threading.Event()
+        # 새로운 쓰레드 객체 생성
+        self.recog_working_area = RecogWorkingArea(self.robot_type, stop_event)
+        self.road_following = RoadFollowing(self.robot_type, stop_event)
+        self.recog_working_area.working_area = [target_color]
 
         # 쓰레드 시작
         self.recog_working_area.start()
@@ -182,21 +199,9 @@ class AGV():
         while not stop_event.is_set():
             time.sleep(0.1)
 
-        print(f'{current_color} 감지됨!')
-        
         # 쓰레드 정리
         self.cleanup_threads()
         
-        self.status = Status.WORKING
-
-        # 로봇 동작
-        # 작업 타입에 따라서 다른 동작 수행
-        if current_work_type == 'pickup':
-            # TODO 픽업 동작 추가
-            print('픽업 중...')
-        elif current_work_type == 'dropoff':
-            # TODO 놓기 동작 추기
-            print('물건을 자리에 놓는 중...')
 
     def send_frame(self):
         while self.th_streaming_flag:
@@ -267,7 +272,7 @@ class AGV():
 
 
 if __name__ == '__main__':
-    agv = AGV(2)
+    agv = AGV("B")
     try:
         agv.subscribe()
         streaming_thread = threading.Thread(target=agv.send_frame, daemon=True)
