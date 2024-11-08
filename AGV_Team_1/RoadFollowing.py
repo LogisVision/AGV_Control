@@ -1,5 +1,3 @@
-import torchvision
-import torch
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 import PIL.Image
@@ -7,21 +5,12 @@ import numpy as np
 import threading
 from MyCamera import Camera
 from ArmServo import *
+from SteeringModel import *
 
 class RoadFollowing(threading.Thread):
     def __init__(self, idx, stop_event):
         super().__init__()
-        # Model Variable
-        self.model = torchvision.models.resnet18(pretrained=True)
-        self.model.fc = torch.nn.Linear(512, 2)
-        self.model.load_state_dict(torch.load('best_steering_model_xy_test (2).pth'))
-
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = self.model.to(self.device)
-        self.model = self.model.eval().half()
-
-        self.mean = torch.Tensor([0.485, 0.456, 0.406]).cuda().half()
-        self.std = torch.Tensor([0.229, 0.224, 0.225]).cuda().half()
+        self.steering_model = SteeringModel()
 
         # Peripheral
         self.camera = Camera.instance()
@@ -46,8 +35,8 @@ class RoadFollowing(threading.Thread):
         self.stop_event = stop_event
     def preprocess(self, image):
         image = PIL.Image.fromarray(image)
-        image = transforms.functional.to_tensor(image).to(self.device).half()
-        image.sub_(self.mean[:, None, None]).div_(self.std[:, None, None])
+        image = transforms.functional.to_tensor(image).to(self.steering_model.device).half()
+        image.sub_(self.steering_model.mean[:, None, None]).div_(self.steering_model.std[:, None, None])
         return image[None, ...]
 
     def run(self):
@@ -56,7 +45,7 @@ class RoadFollowing(threading.Thread):
     def execute_road_following(self):
         while self.th_flag and not self.stop_event.is_set():
             image = self.camera.value
-            xy = self.model(self.preprocess(image)).detach().float().cpu().numpy().flatten()
+            xy = self.steering_model.model(self.preprocess(image)).detach().float().cpu().numpy().flatten()
             x = xy[0]
             y = (0.5 - xy[1]) / 2.0
 
