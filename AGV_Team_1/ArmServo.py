@@ -10,29 +10,36 @@ class AGVServo:
             cls._instance = super(AGVServo, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, init_degree):
+    def __init__(self, init_degree = [-1, 0, 0, 0, 0, 0]):
         # 이미 초기화된 경우, 다시 초기화하지 않음
         if hasattr(self, '_initialized') and self._initialized:
             return
         self.speed_motor = 150
         self.dir = -1
-        self.motor_degree = init_degree
+        self.motor_degree = init_degree.copy()
         self.sensitivity_degree = 5
         self.robot = Robot()
         for i in range(1, 6):
             TTLServo.servoAngleCtrl(i, self.motor_degree[i], self.dir, self.speed_motor)
         self.robot.stop()
+        self.initial_degree = init_degree
         self._initialized = True  # 초기화 상태를 기록하여 중복 초기화 방지
 
-    def check_in_range(self, degree):
-        if degree > 150:
-            return 150
-        if degree < -150:
-            return -150
+    def check_in_range(self, idx, degree):
+        if idx == 5:
+            if degree > 80:
+                return 80
+            if degree < -50:
+                return -50
+        else:
+            if degree > 150:
+                return 150
+            if degree < -150:
+                return -150
         return degree
 
     def update_degree(self, idx, degree):
-        self.motor_degree[idx] = self.check_in_range(degree)
+        self.motor_degree[idx] = self.check_in_range(idx, degree)
 
     """
     idx meaning
@@ -53,6 +60,11 @@ class AGVServo:
             self.speed_motor
         )
 
+    def reset_degree(self):
+        for idx, deg in enumerate(self.initial_degree):
+            if idx > 0:  # idx 0은 더미값(-1)이므로 건너뜁니다
+                self.operate_arm(idx, deg)
+            
     def stop(self):
         self.robot.stop()
 
