@@ -10,8 +10,8 @@ class Camera(SingletonConfigurable):
     value = traitlets.Any()
 
     # config
-    width = traitlets.Integer(default_value=224).tag(config=True)
-    height = traitlets.Integer(default_value=224).tag(config=True)
+    width = traitlets.Integer(default_value=640).tag(config=True)
+    height = traitlets.Integer(default_value=480).tag(config=True)
     fps = traitlets.Integer(default_value=21).tag(config=True)
     capture_width = traitlets.Integer(default_value=3280).tag(config=True)
     capture_height = traitlets.Integer(default_value=2464).tag(config=True)
