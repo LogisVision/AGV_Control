@@ -20,7 +20,7 @@ class Status(Enum):
 
 class AGV():
     def __init__(self, robot_type):
-        self.idx = idx
+        # self.robot_type = robot_type
 
         # 작업 큐 생성
         self.work_queue = Queue()
@@ -29,6 +29,7 @@ class AGV():
         self.robot_type = robot_type
         self.servo = AGVTeamOneServo() if robot_type == "A" else AGVTeamTwoServo()
         self.servo.reset_degree()
+        self.auto_move_camera = Tracking(robot_type)
 
         self.camera = Camera.instance()
 
@@ -47,20 +48,23 @@ class AGV():
 
         self.topics = {
             'sub_topic' : {
-                'demon_status' : f'{self.robot_type}/Demon/Status/ToJetbot'
-                'demon_command': f'{self.idx}/jetbot/command',
-                'auto_mode': f'{self.idx}/AGV/auto_mode',
-                'qt_control': f'{self.idx}/AGV/control',
-                'qt_command': f'{self.idx}/AGV/command',
+                'demon_status' : f'{self.robot_type}/Demon/Status/ToJetbot',
+                'demon_command': f'{self.robot_type}/jetbot/command',
+                'qt_calibrate_angle': f'{self.robot_type}/AGV/auto_mode',
+                'qt_control': f'{self.robot_type}/AGV/control',
+                'qt_command': f'{self.robot_type}/AGV/command',
                 },
             'pub_topic' : {
                 'demon_status' : f'{self.robot_type}/Demon/Status/ToDemon',
-                'qt_streaming' : f'{self.idx}/AGV/camera'
+                'qt_streaming' : f'{self.robot_type}/AGV/camera'
             },
         }
 
         try:
+            # 주원이형
             self.client.connect('70.12.225.174', 1883, 60)
+            # 철진님
+            # self.client.connect('70.12.227.160', 1883, 60)
             self.client.loop_start()
         except Exception as e:
             print(f'MQTT 연결 중 오류 발생: {e}')
@@ -87,9 +91,17 @@ class AGV():
 
     def on_message(self, client, userdata, msg):
         try:
-            print(msg.topic, msg.payload)
+            # print(msg.topic, msg.payload)
             if msg.topic == self.topics['sub_topic']['demon_command']:
                 # command = msg.payload.decode().strip().lower()
+                """
+                demon server msg sample
+                B/Demon/Status/ToJetbot b'
+                {"destination": {"address": "0", "state": "progress", "space": "workspaces"},
+                "state": "completed",
+                "robot": "B",
+                "item": {"state": "progress", "id": "6c2jh4QkSw7NX7skPyY0", "location": {"address": "0", "state": "progress", "space": "incomings"}, "color": {"blue": 114, "green": 67, "red": 51}}}'
+                """
 
                 work_info = {
                     'destination': command['destination'],
@@ -97,30 +109,37 @@ class AGV():
                 }
                 
                 self.work_queue.put(work_info)
-                print(f'작업 추가됨: {work_info['item']} at {work_info['destination']}')
+                print(f"작업 추가됨: {work_info['item']} at {work_info['destination']}")
             
             elif msg.topic == self.topics['sub_topic']['demon_status']:
-                self.client.publish(self.topics['pub_topic']['demon_status'], self.status.value)
+                # self.client.publish(self.topics['pub_topic']['demon_status'], self.status.value)
+                self.client.publish(self.topics['pub_topic']['demon_status'], 'waiting')
                 print(f'상태 전송 완료: {self.status.value}')
 
             elif msg.topic == self.topics['sub_topic']['qt_control']:
                 command = msg.payload.decode("utf-8")
                 if command == "AUTO_ON":
-                    self.auto_mode_active = True
-                    self.auto_move_camera = Tracking(self.idx)
-                    self.auto_move_camera.start()
+                    print("automode 시작")
+                    self.auto_mode_active = True    
+                    # self.auto_move_camera = Tracking(self.robot_type)
+                    # self.auto_move_camera.start()
                         
                 elif command == "AUTO_OFF":
                     self.auto_mode_active = False
-                    self.auto_move_camera.stop()
-                    self.auto_move_camera.join()
+                    # self.auto_move_camera.stop()
+                    # self.auto_move_camera.join()
             
             # 디버깅용
-            elif msg.topic == self.topics['sub_topic']['auto_mode']:
+            elif msg.topic == self.topics['sub_topic']['qt_calibrate_angle']:
                 if self.auto_mode_active:
                     data = json.loads(msg.payload.decode("utf-8"))
-                    self.auto_move_camera.offset_x = data.get("offset_x", 0)
-                    self.auto_move_camera.offset_y = data.get("offset_y", 0)
+                    if (abs(self.auto_move_camera.offset_x - self.auto_move_camera.mid_position_x) > self.auto_move_camera.th_x
+                     or abs(self.auto_move_camera.offset_y - self.auto_move_camera.mid_position_y) > self.auto_move_camera.th_y
+                      or abs(self.auto_move_camera.distance - self.auto_move_camera.th_distance) > 1):
+                        self.auto_move_camera.offset_x = data.get("offset_x", self.auto_move_camera.mid_position_x)
+                        self.auto_move_camera.offset_y = data.get("offset_y", self.auto_move_camera.mid_position_y)
+                        self.auto_move_camera.distance = data.get("distance", 100)
+                        self.auto_move_camera.tracking()    
 
             elif msg.topic == self.topics['sub_topic']['qt_command'] and not self.auto_mode_active:
                 if self.status == Status.WAITING:
@@ -135,20 +154,19 @@ class AGV():
         if self.status == Status.WAITING:
             try:
                 # Queue에서 작업 가져오기 (작업이 없으면 대기)
-                work_info = self.work_queue.get(timeout=5)
-                print(f'새로운 작업 시작: {work_info['item']} at {work_info['destination']}')
-                
-                self.status = Status.START
-                self.start_threads(work_info)
+                if not self.work_queue.empty():
+                    work_info = self.work_queue.get(timeout=5)
+                    print(f"새로운 작업 시작: {work_info['item']} at {work_info['destination']}")
+                    
+                    self.status = Status.START
+                    self.start_threads(work_info)
 
-                # 작업 완료 표시
-                self.work_queue.task_done()
-                self.status = Status.DONE 
-                self.status = Status.WAITING
+                    # 작업 완료 표시
+                    self.work_queue.task_done()
+                    self.status = Status.DONE 
+                    self.status = Status.WAITING
+                pass
 
-            except self.work_queue.Empty:
-                print('5초 내 존재하는 작업이 없습니다.')
-                return
             except Exception as e:
                 print(f'작업 처리 중 오류 발생: {e}')
                 return
@@ -225,15 +243,15 @@ class AGV():
                 arg = int(float(arg)) if isinstance(arg, str) and '.' in arg else int(arg)
 
             if command == "go":
-                self.servo.move("f", 2, 1)
+                self.servo.move("f")
             elif command == "back":
-                self.servo.move("b", 2, 1)
+                self.servo.move("b")
             elif command == "mid":
                 self.servo.stop()
             elif command == "left":
-                self.servo.move("l", 2, 1)
+                self.servo.move("l")
             elif command == "right":
-                self.servo.move("r", 2, 1)
+                self.servo.move("r")
             elif command == "grab_angle":
                 self.servo.operate_arm(4, int(arg))
             elif command == "camera_angle":
@@ -275,8 +293,8 @@ if __name__ == '__main__':
     try:
         agv = AGV("B")
         agv.subscribe()
-        # streaming_thread = threading.Thread(target=agv.send_frame, daemon=True)
-        # streaming_thread.start()
+        streaming_thread = threading.Thread(target=agv.send_frame, daemon=True)
+        streaming_thread.start()
         while True:
             agv.process_work()
     except KeyboardInterrupt:
