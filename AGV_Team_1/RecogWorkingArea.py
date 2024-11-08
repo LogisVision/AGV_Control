@@ -15,9 +15,11 @@ class RecogWorkingArea(threading.Thread):
         # Todo: Get Color Range
         self.colors_range = {
             'red' : [np.array([0, 0, 0]), np.array([0, 0, 0])],
-            'green' : [np.array([0, 0, 0]), np.array([0, 0, 0])],
-            'blue' : [np.array([0, 0, 0]), np.array([0, 0, 0])],
+            'green' : [np.array([60, 110, 160]), np.array([75, 140, 180])],
+            'blue' : [np.array([100, 130, 150]), np.array([140, 190, 190])],
             'yellow' : [np.array([0, 0, 0]), np.array([0, 0, 0])],
+            'orange' : [np.array([16, 220,190]), np.array([20, 255, 210])],
+            'purple' : [np.array([110, 100, 140]), np.array([140, 140, 160])],
         }
 
         self.camera = Camera.instance()
