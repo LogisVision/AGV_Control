@@ -12,30 +12,35 @@
 - AGV Team 1 : AGV Team2가 운반해놓은 물품을 Road Following을 통해 주행하고 특정 선반에 올려두는 작업을 수행합니다.
 - AGV Team 2 : 새로 입고되는 물품에 대해서 Road Following을 통해 AGV Team 1이 운반할 수 있도록 작업대에 적재합니다.
 
-## 기능
+## 기술 스택
+<img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white">
+<img src="https://img.shields.io/badge/Pytorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white">
+<img src="https://img.shields.io/badge/OPENCV-5C3EE8?style=for-the-badge&logo=OPENCV&logoColor=white">
+<img src="https://img.shields.io/badge/QT-41CD52?style=for-the-badge&logo=QT&logoColor=white">
+<img src="https://img.shields.io/badge/MQTT-660066?style=for-the-badge&logo=MQTT&logoColor=white">
+<img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=Github&logoColor=white">
 
+## 기능
 - Road Following
 - Recognize Working Area
 - Carrying Boxes
 - Communication with Server
 - Remote Control by QT Controller
 
-## 진행 상황
+## 완료
+- Road Following
+- Remote Control by QT Controller 
+- Get Distance between face and Camera 
+- Move arm following face 
 
-### Team 1
-
-- Collect Road Image
-- Train Road Following Model
-
-### Team2
+## 진행중
+- Modularization
+- Train Road Following Model (Requires precise driving)
 
 ## 해야할 것
-
-### Team 1
-
-- Road Following Test
 - Recognize Working Area
 - Carrying Boxes
 - Communication with Server
+- Get Distance from Box (Added)
+- Move arm following box (Added)
 
-### Team2
