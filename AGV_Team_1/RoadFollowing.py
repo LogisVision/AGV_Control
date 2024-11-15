@@ -4,11 +4,13 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 import PIL.Image
 import numpy as np
+import threading
 from MyCamera import Camera
 from ArmServo import *
 
-class RoadFollowing:
+class RoadFollowing(threading.Thread):
     def __init__(self, idx):
+        super().__init__()
         # Model Variable
         self.model = torchvision.models.resnet18(pretrained=True)
         self.model.fc = torch.nn.Linear(512, 2)
