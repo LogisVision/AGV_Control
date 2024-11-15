@@ -40,6 +40,9 @@ class RoadFollowing:
         self.angle = 0.0
         self.angle_last = 0.0
 
+        # Road Following Execute Flag
+        self.th_flag = True
+
     def preprocess(self, image):
         image = PIL.image.fromarray(image)
         image = transforms.functional.to_tensor(image).to(self.device).half()
@@ -47,19 +50,24 @@ class RoadFollowing:
         return image[None, ...]
 
     def execute_road_following(self):
-        image = self.camera.value
-        xy = self.model(self.preprocess(image)).detach().float().cpu().numpy().flatten()
-        x = xy[0]
-        y = (0.5 - xy[1]) / 2.0
+        while self.th_flag:
+            image = self.camera.value
+            xy = self.model(self.preprocess(image)).detach().float().cpu().numpy().flatten()
+            x = xy[0]
+            y = (0.5 - xy[1]) / 2.0
 
-        # 조향값 계산
-        self.angle = np.arctan2(x, y)
+            # 조향값 계산
+            self.angle = np.arctan2(x, y)
 
-        # PID 제어를 이용한 모터 제어
-        pid = self.angle * self.steering_gain + (self.angle - self.angle_last) * self.steering_dgain
-        self.angle_last = self.angle
+            # PID 제어를 이용한 모터 제어
+            pid = self.angle * self.steering_gain + (self.angle - self.angle_last) * self.steering_dgain
+            self.angle_last = self.angle
 
-        steering_value = pid + self.steering_bias
+            steering_value = pid + self.steering_bias
 
-        self.servo.robot.left_motor.value = max(min(self.speed_gain + steering_value, 1.0), 0.0)
-        self.servo.robot.right_motor.value = max(min(self.speed_gain - steering_value, 1.0), 0.0)
+            self.servo.robot.left_motor.value = max(min(self.speed_gain + steering_value, 1.0), 0.0)
+            self.servo.robot.right_motor.value = max(min(self.speed_gain - steering_value, 1.0), 0.0)
+        self.servo.stop()
+
+    def stop(self):
+        self.th_flag = False
