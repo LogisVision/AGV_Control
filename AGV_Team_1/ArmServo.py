@@ -69,6 +69,9 @@ class AGVServo:
         time.sleep(duration)
         self.stop()
 
+    def __del__(self):
+        self.robot.stop()
+
 
 # 싱글톤 기반의 AGVTeamOneServo 클래스
 class AGVTeamOneServo(AGVServo):
@@ -80,7 +83,8 @@ class AGVTeamOneServo(AGVServo):
         return cls._instance
 
     def __init__(self):
-        super().__init__([-1, 8, 0, 0, 0, 0])
+        self.initial_degree = [-1, 8, 0, 0, 0, 0]
+        super().__init__(self.initial_degree)
 
 
 # 싱글톤 기반의 AGVTeamTwoServo 클래스
@@ -93,4 +97,5 @@ class AGVTeamTwoServo(AGVServo):
         return cls._instance
 
     def __init__(self):
-        super().__init__([-1, 6, 11, 7, 0, 4])
+        self.initial_degree = [-1, 6, 11, 7, 0, 4]
+        super().__init__(self.initial_degree)
