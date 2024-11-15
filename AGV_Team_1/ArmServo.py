@@ -3,7 +3,17 @@ from jetbot import Robot
 import time
 
 class AGVServo:
+    _instance = None  # 싱글톤 인스턴스를 저장하는 클래스 변수
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(AGVServo, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self, init_degree):
+        # 이미 초기화된 경우, 다시 초기화하지 않음
+        if hasattr(self, '_initialized') and self._initialized:
+            return
         self.speed_motor = 150
         self.dir = -1
         self.motor_degree = init_degree
@@ -12,6 +22,7 @@ class AGVServo:
         for i in range(1, 6):
             TTLServo.servoAngleCtrl(i, self.motor_degree[i], self.dir, self.speed_motor)
         self.robot.stop()
+        self._initialized = True  # 초기화 상태를 기록하여 중복 초기화 방지
 
     def check_in_range(self, degree):
         if degree > 150:
@@ -33,7 +44,7 @@ class AGVServo:
     """
     def operate_arm(self, idx, degree):
         if idx < 1 or idx > 5:
-            pass
+            return
         self.update_degree(idx, degree)
         TTLServo.servoAngleCtrl(
             idx,
@@ -58,11 +69,28 @@ class AGVServo:
         time.sleep(duration)
         self.stop()
 
+
+# 싱글톤 기반의 AGVTeamOneServo 클래스
 class AGVTeamOneServo(AGVServo):
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(AGVTeamOneServo, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
         super().__init__([-1, 8, 0, 0, 0, 0])
 
+
+# 싱글톤 기반의 AGVTeamTwoServo 클래스
 class AGVTeamTwoServo(AGVServo):
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(AGVTeamTwoServo, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
         super().__init__([-1, 6, 11, 7, 0, 4])
-
