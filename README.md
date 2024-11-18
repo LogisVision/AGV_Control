@@ -34,13 +34,13 @@
 - Remote Control by QT Controller 
 - Get Distance between face and Camera 
 - Move arm following face 
+- Recognize Working Area
 
 ## 진행중
 - Modularization
-- Train Road Following Model (Requires precise driving)
+- Recognize Working Area (Multi Area)
 
 ## 해야할 것
-- Recognize Working Area
 - Carrying Boxes
 - Communication with Server
 - Get Distance from Box (Added)
