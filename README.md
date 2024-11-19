@@ -39,6 +39,7 @@
 ## 진행중
 - Modularization
 - Recognize Working Area (Multi Area)
+- Demon Server Communication
 
 ## 해야할 것
 - Carrying Boxes
