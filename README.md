@@ -35,14 +35,14 @@
 - Get Distance between face and Camera 
 - Move arm following face 
 - Recognize Working Area (Single, Multi Area)
+- Get Distance from Box (Added)
+- Move arm following box (Added)    
+- Consider Cross Position Box
 
 ## 진행중
 - Modularization
 - Demon Server Communication
-- Get Distance from Box (Added)
-- Move arm following box (Added)
 
 ## 해야할 것
 - Carrying Boxes
-- Consider Cross Position Box
 

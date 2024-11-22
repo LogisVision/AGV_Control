@@ -13,19 +13,20 @@ class Tracking(threading.Thread):
         self.offset_y = 0
         self.th_flag = True
         self.th_distance = 20
-        self.mid_position_x = 315
+        self.mid_position_x = 320
         self.mid_position_y = 240
         self.distance = 100
+        self.box_angle = 0
 
     def tracking(self):
         if abs(self.distance - self.th_distance) > 10:
-            self.servo.robot_speed = 0.4
+            self.servo.robot_speed = 0.6
         else:
             self.servo.robot_speed = 0.2
 
         if self.distance - self.th_distance > 1:
             self.servo.move("f")
-        elif self.distance < self.th_distance:
+        elif self.distance - self.th_distance < -1:
             self.servo.move("b")
 
         # 좌우 (turnAngle) 조정
@@ -37,19 +38,19 @@ class Tracking(threading.Thread):
 
         # print(f"Turn angle adjusted to: {self.servo.motor_degree[1]}")
 
-        # 상하 (camAngle) 조정
-        if self.offset_y - self.mid_position_y < -1 * self.th_y :  # 화면 중심보다 위쪽에 있을 때
-            self.servo.operate_arm(5, self.servo.motor_degree[5] - 1)
+        # # 상하 (camAngle) 조정
+        # if self.offset_y - self.mid_position_y < -1 * self.th_y :  # 화면 중심보다 위쪽에 있을 때
+        #     self.servo.operate_arm(5, self.servo.motor_degree[5] - 1)
 
-        elif self.offset_y - self.mid_position_y > 1 * self.th_y :  # 화면 중심보다 아래쪽에 있을 때
-            self.servo.operate_arm(5, self.servo.motor_degree[5] + 1)
+        # elif self.offset_y - self.mid_position_y > 1 * self.th_y :  # 화면 중심보다 아래쪽에 있을 때
+        #     self.servo.operate_arm(5, self.servo.motor_degree[5] + 1)
 
         # print(f"Camera angle adjusted to: {self.servo.motor_degree[5]}")
 
-    def run(self):
-        while self.th_flag:
-            self.tracking()
-            time.sleep(0.1)
+    # def run(self):
+    #     while self.th_flag:
+    #         self.tracking()
+    #         time.sleep(0.1)
     
     def stop(self):
         self.th_flag = False

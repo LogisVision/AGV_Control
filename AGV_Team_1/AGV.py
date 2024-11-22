@@ -41,6 +41,12 @@ class AGV():
         self.common_work_space_color = 'yellow'
 
         self.th_streaming_flag = True
+        self.motor_operate = False
+
+        self.ema_period = 10 # EMA 기간 설정
+        self.prev_distance_ema = None
+        self.prev_offset_x_ema = None
+        self.prev_offset_y_ema = None
 
         # MQTT 클라이언트 설정
         self.client = mqtt.Client()
@@ -62,14 +68,16 @@ class AGV():
         }
 
         try:
+            # 진이 핫스팟
+            self.client.connect('172.20.10.9', 1883, 60)
             # 주원이형
-            self.client.connect('70.12.225.174', 1883, 60)
+            # self.client.connect('70.12.225.174', 1883, 60)
             # 철진님
             # self.client.connect('70.12.227.160', 1883, 60)
             self.client.loop_start()
         except Exception as e:
             print(f'MQTT 연결 중 오류 발생: {e}')
-            self.cleanup()
+            self.cleanup_threads()
 
     def subscribe(self):
         try:
@@ -133,25 +141,30 @@ class AGV():
             
             # 디버깅용
             elif msg.topic == self.topics['sub_topic']['qt_calibrate_angle']:
-                if self.auto_mode_active:
+                if self.auto_mode_active and not self.motor_operate:
                     data = json.loads(msg.payload.decode("utf-8"))
 
                     self.auto_move_camera.offset_x = data.get("offset_x", self.auto_move_camera.mid_position_x)
                     self.auto_move_camera.offset_y = data.get("offset_y", self.auto_move_camera.mid_position_y)
                     self.auto_move_camera.distance = data.get("distance", 100)
+                    self.auto_move_camera.box_angle = data.get("angle", 0)
 
+                    self.motor_operate = True
                     self.camera_lock.acquire()
+                    y = (2 / 9) * self.auto_move_camera.box_angle - 10
+                    self.auto_move_camera.mid_position_x = 315 + y
                     self.auto_move_camera.tracking()    
                     self.camera_lock.release()
 
+                    time.sleep(1)
                     if (
                         abs(self.auto_move_camera.offset_x - self.auto_move_camera.mid_position_x) <= self.auto_move_camera.th_x 
-                    and abs(self.auto_move_camera.offset_y - self.auto_move_camera.mid_position_y) <= self.auto_move_camera.th_y
                     and abs(self.auto_move_camera.distance - self.auto_move_camera.th_distance) <= 1.0):
                         self.auto_mode_active = False
                         self.target_xy()
-
-
+                    
+                    self.motor_operate = False
+                    
 
             elif msg.topic == self.topics['sub_topic']['qt_command'] and not self.auto_mode_active:
                 if self.status == Status.WAITING:
@@ -235,10 +248,11 @@ class AGV():
 
     def send_frame(self):
         while self.th_streaming_flag:
-            _, buffer = cv2.imencode('.jpg', self.camera.value, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
-            jpg_as_text = buffer.tobytes()
-            self.client.publish(self.topics['pub_topic']['qt_streaming'], jpg_as_text)
-            
+            if not self.motor_operate:
+                _, buffer = cv2.imencode('.jpg', self.camera.value, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
+                jpg_as_text = buffer.tobytes()
+                self.client.publish(self.topics['pub_topic']['qt_streaming'], jpg_as_text)
+                
 
     def stop_send_frame(self):
         self.th_streaming_flag = False
@@ -305,7 +319,7 @@ class AGV():
         # Gripper 동작
         time.sleep(3)
         TTLServo.servoAngleCtrl(4, -36, 1, 150)
-        time.sleep(3)
+        time.sleep(5)
         TTLServo.xyInputSmooth(80, 80,2)
         time.sleep(3)
         TTLServo.xyInputSmooth(242,-40, 2)
@@ -314,6 +328,16 @@ class AGV():
         time.sleep(3)
         TTLServo.xyInputSmooth(80, 80,2)
         # print(f"Target (x, y): ({xInput}, {yInput}) reached.")
+    
+    def calculate_ema(self, current_value, prev_ema):
+        """
+        단일 값에 대한 EMA 계산
+        """
+        alpha = 2 / (self.ema_period + 1)
+        if prev_ema is None:
+            return current_value
+        return alpha * current_value + (1 - alpha) * prev_ema
+
 
 
 if __name__ == '__main__':
