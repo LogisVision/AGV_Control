@@ -6,6 +6,7 @@ import threading
 from MyCamera import Camera
 from ArmServo import *
 from SteeringModel import *
+from traitlets.config.configurable import Config  
 
 class RoadFollowing(threading.Thread):
     def __init__(self, robot_type, stop_event):
@@ -14,10 +15,11 @@ class RoadFollowing(threading.Thread):
 
         # Peripheral
         self.camera = Camera.instance()
+        
         self.robot_type = robot_type
         self.servo = AGVTeamOneServo() if robot_type == "A" else AGVTeamTwoServo()
         # Camera angle should be set with data collection environment
-        self.servo.operate_arm(5, -55)
+        self.servo.operate_arm(5, 55)
 
         # Parameter for road following
         self.speed_gain = 0.3
@@ -65,3 +67,4 @@ class RoadFollowing(threading.Thread):
 
     def stop(self):
         self.th_flag = False
+        # self.camera.stop()

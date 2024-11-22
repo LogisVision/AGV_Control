@@ -4,6 +4,7 @@ import time
 import numpy as np
 from MyCamera import Camera
 from ArmServo import *
+from traitlets.config.configurable import Config  
 
 class RecogWorkingArea(threading.Thread):
     def __init__(self, robot_type, stop_event):
@@ -25,8 +26,9 @@ class RecogWorkingArea(threading.Thread):
         }
 
         self.camera = Camera.instance()
+
         self.servo = AGVTeamOneServo() if robot_type == "A" else AGVTeamTwoServo()
-        self.servo.operate_arm(5, -55)
+        self.servo.operate_arm(5, 55)
 
         self.frame_width = self.camera.width
         self.frame_height = self.camera.height
@@ -73,6 +75,7 @@ class RecogWorkingArea(threading.Thread):
                 # 1초 안에 색 못 찾으면 event 발생
                 if self.find_time is not None and time.time() - self.find_time > 1:
                     self.stop_event.set()
+                    print("1초 안에 색 못 찾음")
                     break
                 
                 self.is_find_color = False
@@ -120,3 +123,4 @@ class RecogWorkingArea(threading.Thread):
     def stop(self):
         self.th_flag = False
         self.servo.stop()
+        # self.camera.stop()

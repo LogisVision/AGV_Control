@@ -42,6 +42,7 @@
 ## 진행중
 - Modularization
 - Demon Server Communication
+- Integration with Road Function and Auto Grap Control
 
 ## 해야할 것
 - Carrying Boxes

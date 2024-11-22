@@ -27,6 +27,10 @@ class AGVServo:
         self.initial_degree = init_degree
         self._initialized = True  # 초기화 상태를 기록하여 중복 초기화 방지
 
+    def reset_speed(self):
+        self.robot_speed = 0.1
+        self.move_duration = 0.1
+
     def check_in_range(self, idx, degree):
         if idx == 5:
             if degree > 80:

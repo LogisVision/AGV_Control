@@ -13,7 +13,7 @@ class Tracking(threading.Thread):
         self.offset_y = 0
         self.th_flag = True
         self.th_distance = 20
-        self.mid_position_x = 320
+        self.mid_position_x = 315
         self.mid_position_y = 240
         self.distance = 100
         self.box_angle = 0

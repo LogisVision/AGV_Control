@@ -17,6 +17,7 @@ class Camera(SingletonConfigurable):
     capture_height = traitlets.Integer(default_value=2464).tag(config=True)
  
     def __init__(self, *args, **kwargs):
+        self.ori_value = np.empty((self.height, self.width, 3), dtype=np.uint8)
         self.value = np.empty((self.height, self.width, 3), dtype=np.uint8)
         super(Camera, self).__init__(*args, **kwargs)
 
@@ -28,7 +29,11 @@ class Camera(SingletonConfigurable):
             if not re:
                 raise RuntimeError('Could not read image from camera.')
 
-            self.value = image
+            self.ori_value = image
+            start_x = 208
+            start_y = 128
+            cropped_image = image[start_y:start_y+224, start_x:start_x+224, :]
+            self.value = cropped_image
             self.start()
         except:
             self.stop()
@@ -37,11 +42,21 @@ class Camera(SingletonConfigurable):
 
         atexit.register(self.stop)
 
+    def reset_camera(self):
+        self.cap.release()
+        self.cap = cv2.VideoCapture(self._gst_str(), cv2.CAP_GSTREAMER)
+        self.cap.open(self._gst_str(), cv2.CAP_GSTREAMER)
+
     def _capture_frames(self):
         while True:
             re, image = self.cap.read()
             if re:
-                self.value = image
+                self.ori_value = image
+                # h, w = image.shape[:2]
+                start_x = 208
+                start_y = 128
+                cropped_image = image[start_y:start_y+224, start_x:start_x+224]
+                self.value = cropped_image
             else:
                 break
 
