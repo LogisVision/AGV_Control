@@ -38,12 +38,13 @@
 - Get Distance from Box (Added)
 - Move arm following box (Added)    
 - Consider Cross Position Box
-
-## 진행중
+- Carrying Boxes
 - Modularization
 - Demon Server Communication
 - Integration with Road Function and Auto Grap Control
 
+## 진행중
+
 ## 해야할 것
-- Carrying Boxes
+
 
