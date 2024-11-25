@@ -52,10 +52,10 @@ class Camera(SingletonConfigurable):
             re, image = self.cap.read()
             if re:
                 self.ori_value = image
-                # h, w = image.shape[:2]
+                h, w = image.shape[:2]
                 start_x = 208
                 start_y = 128
-                cropped_image = image[start_y:start_y+224, start_x:start_x+224]
+                cropped_image = image[start_y:start_y+224, start_x:start_x+224, :]
                 self.value = cropped_image
             else:
                 break

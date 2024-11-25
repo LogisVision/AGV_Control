@@ -23,13 +23,13 @@ class AGVServo:
             TTLServo.servoAngleCtrl(i, self.motor_degree[i], self.dir, self.speed_motor)
         self.robot.stop()
         self.robot_speed = 0.1
-        self.move_duration = 0.1
+        self.move_duration = 0.5
         self.initial_degree = init_degree
         self._initialized = True  # 초기화 상태를 기록하여 중복 초기화 방지
 
     def reset_speed(self):
         self.robot_speed = 0.1
-        self.move_duration = 0.1
+        self.move_duration = 0.5
 
     def check_in_range(self, idx, degree):
         if idx == 5:

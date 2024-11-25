@@ -6,8 +6,8 @@ import time, sys
 
 if __name__ == '__main__':
     idx = 0
-    # color = ['yellow', 'orange', 'green', 'purple', 'blue', 'red']
-    color = ['orange']
+    color = ['green', 'blue']
+    # color = ['green']
     servo = AGVTeamTwoServo()
 
     try:
@@ -48,17 +48,17 @@ if __name__ == '__main__':
             # road_following.stop()
             # road_following.join()
             
-            servo.reset_degree()
-            time.sleep(2)
-            servo.operate_arm(1, -90)
-            time.sleep(1)
+            # servo.reset_degree()
+            # time.sleep(2)
+            # servo.operate_arm(1, -90)
+            # time.sleep(1)
 
-            servo.operate_arm(3, servo.grap_box_degree[3])
-            time.sleep(8)
-            servo.operate_arm(2, servo.grap_box_degree[2])
-            time.sleep(8)
-            servo.operate_arm(4, servo.grap_degree)
-            time.sleep(1)
+            # servo.operate_arm(3, servo.grap_box_degree[3])
+            # time.sleep(8)
+            # servo.operate_arm(2, servo.grap_box_degree[2])
+            # time.sleep(8)
+            # servo.operate_arm(4, servo.grap_degree)
+            # time.sleep(1)
 
             idx += 1
         sys.exit(0)

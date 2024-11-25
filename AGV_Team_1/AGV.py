@@ -21,14 +21,12 @@ class Status(Enum):
 
 class AGV():
     def __init__(self, robot_type):
-        # self.robot_type = robot_type
-
         # 작업 큐 생성
         self.work_queue = Queue()
 
         self.robot_type = robot_type
         self.servo = AGVTeamOneServo() if robot_type == "A" else AGVTeamTwoServo()
-        self.servo.reset_degree()
+        # self.servo.reset_degree()
         self.auto_move_camera = Tracking(robot_type)
 
         self.camera = Camera.instance()
@@ -59,7 +57,8 @@ class AGV():
                 },
             'pub_topic' : {
                 'demon_status' : f'{self.robot_type}/Demon/Status/ToDemon',
-                'qt_streaming' : f'{self.robot_type}/AGV/camera'
+                'qt_streaming' : f'{self.robot_type}/AGV/camera',
+                'qt_request_auto_mode' : f'{self.robot_type}/AGV/auto_mode_request',
             },
         }
 
@@ -124,6 +123,7 @@ class AGV():
 
             elif msg.topic == self.topics['sub_topic']['qt_control']:
                 command = msg.payload.decode("utf-8")
+                print(command)
                 if command == "AUTO_ON":
                     print("automode 시작")
                     self.auto_mode_active = True    
@@ -155,7 +155,7 @@ class AGV():
                         abs(self.auto_move_camera.offset_x - self.auto_move_camera.mid_position_x) <= self.auto_move_camera.th_x 
                     and abs(self.auto_move_camera.distance - self.auto_move_camera.th_distance) <= 1.0):
                         self.auto_mode_active = False
-                        self.target_xy()
+                        self.grap()
                         self.grap_finish = True
                     
                     self.motor_operate = False
@@ -192,48 +192,57 @@ class AGV():
                 return
 
     def start_threads(self, work_info=None):
-        self.move_and_grap()
-        # time.sleep(1)
-        # self.move_and_drop()
+        print('박스 잡기 시작!')
+        self.move_and_grap(work_info)
+        print('박스 잡기 완료!')
+
+        time.sleep(1)
+
+        print('박스 놓기 시작!')
+        self.move_and_drop(work_info)
+        print('박스 놓기 완료!')
         
 
-    def move_and_grap(self, target_color='orange'):
+    def move_and_grap(self, work_info):
         # TODO : Requires Test
         # TODO : Define specific work
 
-        # self.status = Status.MOVING 
+        self.status = Status.MOVING 
         
-        # item_color = work_info['item']['color']
-        # target_color = self.common_work_space_color if self.robot_type == "A" else self.incoming_area_color
-        target_color = 'orange'
+        target_color = 'green' if self.robot_type == "A" else 'yellow'
         print(f'작업대 색상: {target_color}')
-        # self.execute_road_following(target_color)
-        stop_event = threading.Event()
-        stop_event.clear()
-        # 새로운 쓰레드 객체 생성
-        self.recog_working_area = RecogWorkingArea(self.robot_type, stop_event)
-        self.road_following = RoadFollowing(self.robot_type, stop_event)
-        self.recog_working_area.working_area = [target_color]
+        
+        self.execute_road_following(target_color)
+        # stop_event = threading.Event()
+        # stop_event.clear()
+        # # 새로운 쓰레드 객체 생성
+        # self.recog_working_area = RecogWorkingArea(self.robot_type, stop_event)
+        # self.road_following = RoadFollowing(self.robot_type, stop_event)
+        # self.recog_working_area.working_area = [target_color]
+        # print(self.recog_working_area.working_area)
 
-        # 쓰레드 시작
-        self.recog_working_area.start()
-        self.road_following.start()
+        # # 쓰레드 시작
+        # self.recog_working_area.start()
+        # self.road_following.start()
 
-        # # 이벤트 대기
-        while not stop_event.is_set():
-            time.sleep(0.1)
+        # # # 이벤트 대기
+        # while not stop_event.is_set():
+        #     time.sleep(0.1)
 
-        # 쓰레드 정리
-        self.cleanup_threads()
+        # # 쓰레드 정리
+        # self.cleanup_threads()
 
         print(f'작업대 도착 완료!')
 
-        # self.status = Status.WORKING
-
+        self.status = Status.WORKING
+        
+        self.calibrate_position(1)
+        # self.calibrate_position(work_info['item']['location']['address'])
         self.servo.robot_speed = 0.5
-        self.servo.move_duration = 2
+        self.servo.move_duration = 2.5
         self.servo.move("r")
         time.sleep(1)
+        self.servo.move_duration = 1.0
         self.servo.move("b")
         self.servo.operate_arm(5, 0)
 
@@ -241,27 +250,28 @@ class AGV():
         
         # 로봇 동작
         # TODO: 박스 잡기 작업 수행
+        print('박스 잡기 시작!')
+        data = {'auto_mode' : 'Start'}
+        self.client.publish(self.topics['pub_topic']['qt_request_auto_mode'], json.dumps(data))
 
-        self.auto_mode_active = True
+        self.grap_finish = False
         
         while not self.grap_finish:
             time.sleep(0.1)
         
         self.grap_finish = False
 
+        self.servo.robot_speed = 0.5
+        self.servo.move_duration = 1.0
         self.servo.move("b")
         time.sleep(1)
-
+        self.servo.move_duration = 2.5
         self.servo.move("l")
-        # self.servo.reset_speed()
-        self.status = Status.WAITING
+        print('박스 잡기 완료!')
 
-        # self.camera.stop()
-    
-    def move_and_drop(self, target_color='orange'):
+    def move_and_drop(self, work_info):
         self.status = Status.MOVING
-        # target_color = work_info['destination']['color'] if self.robot_type == "A" else self.common_work_space_color
-        # target_color = 'orange'
+        target_color = 'yellow' if self.robot_type == "A" else 'green'
         print(f'목표 위치 색상: {target_color}')
         self.execute_road_following(target_color)
         print(f'목표 위치 도착 완료!')
@@ -270,23 +280,26 @@ class AGV():
 
         # 로봇 동작
         # TODO: 박스 놓기 작업 수행 
+        self.calibrate_position(1)
+        # self.calibrate_position(work_info['destination']['address'])
 
-        self.robot_speed = 0.5
-        self.move_duration = 2
+        self.servo.robot_speed = 0.5
+        self.servo.move_duration = 2.5
         self.servo.move("r")
+        self.drop()
 
-        TTLServo.servoAngleCtrl(2, 55, 1, 165)
-        TTLServo.servoAngleCtrl(3, 55, 1, 180)
-        time.sleep(4)
-        # 그랩 놓기
-        TTLServo.servoAngleCtrl(4, 0, 1, 150)
-        time.sleep(3)
-        TTLServo.servoAngleCtrl(3,-40, 1, 190) # 팔빼기
-        TTLServo.servoAngleCtrl(2, 20, 1, 160)
-        time.sleep(2)
-        TTLServo.xyInputSmooth(80, 80,2) # 초기상태
+        # TTLServo.servoAngleCtrl(2, 55, 1, 165)
+        # TTLServo.servoAngleCtrl(3, 55, 1, 180)
+        # time.sleep(4)
+        # # 그랩 놓기
+        # TTLServo.servoAngleCtrl(4, 0, 1, 150)
+        # time.sleep(3)
+        # TTLServo.servoAngleCtrl(3,-40, 1, 190) # 팔빼기
+        # TTLServo.servoAngleCtrl(2, 20, 1, 160)
+        # time.sleep(2)
+        # TTLServo.xyInputSmooth(80, 80,2) # 초기상태
 
-        self.servo.move("l")
+        # self.servo.move("l")
         self.servo.reset_speed()
 
     def execute_road_following(self, target_color):
@@ -307,8 +320,16 @@ class AGV():
 
         # 쓰레드 정리
         self.cleanup_threads()
-        # self.camera.stop()
-        
+
+    def calibrate_position(self, idx):
+        if idx == 1:
+            return
+        self.servo.move_duration = 1
+        self.servo.robot_speed = 0.5
+        if idx == 2:
+            self.servo.move("f")
+        elif idx == 0:
+            self.servo.move("b")
 
     def send_frame(self):
         while self.th_streaming_flag:
@@ -316,6 +337,7 @@ class AGV():
                 _, buffer = cv2.imencode('.jpg', self.camera.ori_value, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
                 jpg_as_text = buffer.tobytes()
                 self.client.publish(self.topics['pub_topic']['qt_streaming'], jpg_as_text)
+                time.sleep(0.5)
                 
 
     def stop_send_frame(self):
@@ -377,20 +399,22 @@ class AGV():
         self.client.loop_stop()
         self.client.disconnect()
 
-    def target_xy(self):
+    def grap(self):
         TTLServo.xyInputSmooth(242,-40, 2)
         # Gripper 동작
         time.sleep(3)
         TTLServo.servoAngleCtrl(4, -36, 1, 150)
-        time.sleep(5)
+        time.sleep(3)
         TTLServo.xyInputSmooth(80, 80,2)
         time.sleep(3)
+
+    def drop(self):
         TTLServo.xyInputSmooth(242,-40, 2)
         time.sleep(3)
         TTLServo.servoAngleCtrl(4, 80, 1, 150)
         time.sleep(3)
         TTLServo.xyInputSmooth(80, 80,2)
-        # print(f"Target (x, y): ({xInput}, {yInput}) reached.")
+        time.sleep(3)
 
 
 if __name__ == '__main__':
@@ -399,10 +423,10 @@ if __name__ == '__main__':
         agv.subscribe()
         streaming_thread = threading.Thread(target=agv.send_frame, daemon=True)
         streaming_thread.start()
-        agv.move_and_grap()
+        agv.start_threads()
         while True:
-            pass
             # agv.process_work()
+            time.sleep(1)
     except KeyboardInterrupt:
-        agv.terminate()
+        agv.terminate() 
 

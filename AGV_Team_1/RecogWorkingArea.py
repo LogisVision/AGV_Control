@@ -17,12 +17,18 @@ class RecogWorkingArea(threading.Thread):
         # index 1 : upper range
         # Todo: Get Color Range
         self.colors_range = {
-            'red' : [np.array([2, 155, 178]), np.array([8, 175, 200])],
-            'green' : [np.array([60, 120, 160]), np.array([75, 150, 180])],
-            'blue' : [np.array([100, 130, 150]), np.array([140, 190, 190])],
-            'yellow' : [np.array([24, 70, 160]), np.array([32, 120, 220])],
-            'orange' : [np.array([12, 100,200]), np.array([20, 130, 220])],
-            'purple' : [np.array([110, 100, 140]), np.array([140, 140, 160])],
+            # 'red' : [np.array([2, 155, 170]), np.array([12, 175, 200])],
+            # 'green' : [np.array([60, 120, 160]), np.array([80, 150, 180])],
+            # 'blue' : [np.array([100, 130, 150]), np.array([140, 255, 190])],
+            # 'yellow' : [np.array([24, 50, 160]), np.array([32, 255, 220])],
+            # 'orange' : [np.array([12, 125,200]), np.array([20, 240, 220])],
+            # 'purple' : [np.array([110, 100, 140]), np.array([140, 140, 170])],
+            'red' : [np.array([15, 120, 178]), np.array([36, 140, 200])],
+            'green' : [np.array([70, 145, 155]), np.array([80, 150, 170])],
+            'blue' : [np.array([100, 140, 180]), np.array([120, 160, 210])],
+            'yellow' : [np.array([26, 130, 180]), np.array([30, 160, 220])],
+            'orange' : [np.array([15, 170,170]), np.array([18, 200, 200])],
+            'purple' : [np.array([110, 125, 140]), np.array([140, 145, 180])],
         }
 
         self.camera = Camera.instance()
@@ -65,9 +71,14 @@ class RecogWorkingArea(threading.Thread):
                 # Get Outline
                 Contours, _ = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+
                 if Contours:
-                    self.find_time = time.time()
-                    self.colorAction(Contours)
+                    error_Y, error_X = self.colorAction(Contours)
+                    print(error_X)
+                    if error_X < 150:
+                        self.find_time = time.time()
+                        self.is_find_color = True
+                        # self.colorAction(Contours)
                     break
 
                 time.sleep(0.1)
@@ -79,21 +90,6 @@ class RecogWorkingArea(threading.Thread):
                     break
                 
                 self.is_find_color = False
-                # if self.is_find_color:
-                #     self.stop_event.set()
-                #     break
-                # if self.is_find_color and self.servo.motor_degree[5] > -50:
-                #     self.servo.operate_arm(5, -55)
-                #     while self.servo.motor_degree[5] != -55:
-                #         pass
-                #     break
-                
-                # if self.servo.motor_degree[5] <= -50:
-                #     self.stop_event.set()
-                #     self.servo.operate_arm(5, -20)
-                #     break
-
-                # self.is_find_color = False
                 
 
     def colorAction(self, Contours):
@@ -109,15 +105,8 @@ class RecogWorkingArea(threading.Thread):
         error_Y = abs(self.camera_center_y - Y)
         error_X = abs(self.camera_center_x - X)
 
-        self.is_find_color = True
-        # self.stop_event.set()
-        # if error_Y < 15 and error_X < 15:
-        #     print(error_Y, error_X)
-        
-            # self.stop_event.set()
-        # Todo: Define Action
-        # self.stop()
-        # print("Find Color!")
+        return [error_Y, error_X]
+
         # self.is_find_color = True
 
     def stop(self):
