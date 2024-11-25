@@ -22,9 +22,9 @@ class RoadFollowing(threading.Thread):
         self.servo.operate_arm(5, 55)
 
         # Parameter for road following
-        self.speed_gain = 0.3
+        self.speed_gain = 0.4
         # Steering Coefficient
-        self.steering_gain = 0.17
+        self.steering_gain = 0.3
         # Differential Steering Coefficient
         self.steering_dgain = 0.2
         self.steering_bias = 0.0

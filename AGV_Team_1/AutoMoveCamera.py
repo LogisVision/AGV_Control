@@ -20,9 +20,9 @@ class Tracking(threading.Thread):
 
     def tracking(self):
         if abs(self.distance - self.th_distance) > 10:
-            self.servo.robot_speed = 0.6
+            self.servo.robot_speed = 0.4
         else:
-            self.servo.robot_speed = 0.2
+            self.servo.robot_speed = 0.15
 
         if self.distance - self.th_distance > 1:
             self.servo.move("f")

@@ -6,7 +6,7 @@ import time, sys
 
 if __name__ == '__main__':
     idx = 0
-    color = ['green', 'blue']
+    color = ['yellow', 'green']
     # color = ['green']
     servo = AGVTeamTwoServo()
 
@@ -38,6 +38,8 @@ if __name__ == '__main__':
             road_following.stop()
             recog_working_area.join()
             road_following.join()
+
+            time.sleep(2)
 
             # 로봇 동작
             # print("Moving forward...")
