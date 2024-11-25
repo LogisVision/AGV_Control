@@ -101,7 +101,7 @@ class AGVTeamOneServo(AGVServo):
         return cls._instance
 
     def __init__(self):
-        self.initial_degree = [-1, -8, 0, 0, 0, 0]
+        self.initial_degree = [-1, 8, 0, 0, 0, 0]
         super().__init__(self.initial_degree)
 
 

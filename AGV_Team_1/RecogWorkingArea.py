@@ -17,16 +17,10 @@ class RecogWorkingArea(threading.Thread):
         # index 1 : upper range
         # Todo: Get Color Range
         self.colors_range = {
-            # 'red' : [np.array([2, 155, 170]), np.array([12, 175, 200])],
-            # 'green' : [np.array([60, 120, 160]), np.array([80, 150, 180])],
-            # 'blue' : [np.array([100, 130, 150]), np.array([140, 255, 190])],
-            # 'yellow' : [np.array([24, 50, 160]), np.array([32, 255, 220])],
-            # 'orange' : [np.array([12, 125,200]), np.array([20, 240, 220])],
-            # 'purple' : [np.array([110, 100, 140]), np.array([140, 140, 170])],
             'red' : [np.array([15, 120, 178]), np.array([36, 140, 200])],
-            'green' : [np.array([70, 145, 155]), np.array([80, 150, 170])],
+            'green' : [np.array([70, 80, 110]), np.array([80, 180, 190])],
             'blue' : [np.array([100, 140, 180]), np.array([120, 160, 210])],
-            'yellow' : [np.array([26, 130, 180]), np.array([30, 160, 220])],
+            'yellow' : [np.array([26, 130, 180]), np.array([32, 160, 220])],
             'orange' : [np.array([15, 170,170]), np.array([18, 200, 200])],
             'purple' : [np.array([110, 125, 140]), np.array([140, 145, 180])],
         }
@@ -74,10 +68,10 @@ class RecogWorkingArea(threading.Thread):
 
                 if Contours:
                     error_Y, error_X = self.colorAction(Contours)
-                    print(error_X)
-                    if error_X < 150:
-                        self.find_time = time.time()
-                        self.is_find_color = True
+                    # print(error_X)
+                    # if error_X < 150:
+                    self.find_time = time.time()
+                    self.is_find_color = True
                         # self.colorAction(Contours)
                     break
 
@@ -86,7 +80,7 @@ class RecogWorkingArea(threading.Thread):
                 # 1초 안에 색 못 찾으면 event 발생
                 if self.find_time is not None and time.time() - self.find_time > 1:
                     self.stop_event.set()
-                    print("1초 안에 색 못 찾음")
+                    print('작업대 찾기 완료')
                     break
                 
                 self.is_find_color = False

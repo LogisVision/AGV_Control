@@ -30,10 +30,12 @@ class Camera(SingletonConfigurable):
                 raise RuntimeError('Could not read image from camera.')
 
             self.ori_value = image
-            start_x = 208
-            start_y = 128
-            cropped_image = image[start_y:start_y+224, start_x:start_x+224, :]
-            self.value = cropped_image
+            self.value = cv2.resize(image, (224, 224))
+            # self.ori_value = image
+            # start_x = 208
+            # start_y = 128
+            # cropped_image = image[start_y:start_y+224, start_x:start_x+224, :]
+            # self.value = cropped_image
             self.start()
         except:
             self.stop()
@@ -52,11 +54,14 @@ class Camera(SingletonConfigurable):
             re, image = self.cap.read()
             if re:
                 self.ori_value = image
-                h, w = image.shape[:2]
-                start_x = 208
-                start_y = 128
-                cropped_image = image[start_y:start_y+224, start_x:start_x+224, :]
-                self.value = cropped_image
+                self.value = cv2.resize(image, (224, 224))
+                # self.value = image
+                # self.ori_value = image
+                # h, w = image.shape[:2]
+                # start_x = 208
+                # start_y = 128
+                # cropped_image = image[start_y:start_y+224, start_x:start_x+224, :]
+                # self.value = cropped_image
             else:
                 break
 

@@ -7,8 +7,8 @@ class Tracking(threading.Thread):
         
         self.servo = AGVTeamOneServo() if robot_type == "A" else AGVTeamTwoServo()
         self.robot_type = robot_type
-        self.th_x = 2
-        self.th_y = 2
+        self.th_x = 5
+        self.th_y = 5
         self.offset_x = 0
         self.offset_y = 0
         self.th_flag = True
@@ -20,9 +20,9 @@ class Tracking(threading.Thread):
 
     def tracking(self):
         if abs(self.distance - self.th_distance) > 10:
-            self.servo.robot_speed = 0.6
+            self.servo.robot_speed = 0.4
         else:
-            self.servo.robot_speed = 0.2
+            self.servo.robot_speed = 0.15
 
         if self.distance - self.th_distance > 1:
             self.servo.move("f")
