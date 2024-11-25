@@ -6,6 +6,7 @@ from SCSCtrl import TTLServo
 from queue import Queue
 from MyCamera import Camera
 from enum import Enum
+from find_color import *
 import threading
 import time
 import paho.mqtt.client as mqtt
@@ -43,6 +44,7 @@ class AGV():
         self.grap_finish = False
 
         self.working_id = ""
+        self.target_box_color = ""
 
         # MQTT 클라이언트 설정
         self.client = mqtt.Client()
@@ -107,6 +109,9 @@ class AGV():
                 }
 
                 self.working_id = command['id']
+                hsv = rgb_to_hsv(command['item']['color']['red'], command['item']['color']['green'], command['item']['color']['blue'])
+                self.target_box_color = determine_munsell_color(hsv)
+                print(f'박스 색상: {self.target_box_color}')
 
                 self.current_work = work_info
                 
@@ -176,7 +181,7 @@ class AGV():
                 # Queue에서 작업 가져오기 (작업이 없으면 대기)
                 if not self.work_queue.empty():
                     work_info = self.work_queue.get(timeout=5)
-                    print(f"새로운 작업 시작: {work_info['item']} at {work_info['destination']}")
+                    print(f"새로운 작업 시작: {work_info['item']} to {work_info['destination']}")
                     
                     self.status = Status.START
                     self.start_threads(work_info)
@@ -229,7 +234,7 @@ class AGV():
         self.status = Status.WORKING
         
         self.calibrate_position(1)
-        # self.calibrate_position(work_info['item']['location']['address'])
+        # self.calibrate_position(int(work_info['destination']['address']))
         self.servo.robot_speed = 0.5
         self.servo.move_duration = 2.5
         self.servo.move("r")
@@ -243,7 +248,8 @@ class AGV():
         # 로봇 동작
         # TODO: 박스 잡기 작업 수행
         print('박스 잡기 시작!')
-        data = {'auto_mode' : 'Start'}
+        # data = {'auto_mode' : 'Start'}
+        data = {'auto_mode' : self.target_box_color}
         self.client.publish(self.topics['pub_topic']['qt_request_auto_mode'], json.dumps(data))
 
         self.grap_finish = False
@@ -278,7 +284,7 @@ class AGV():
         # 로봇 동작
         # TODO: 박스 놓기 작업 수행 
         self.calibrate_position(1)
-        # self.calibrate_position(work_info['destination']['address'])
+        # self.calibrate_position(int(work_info['item']['location']['address']))
 
         self.servo.robot_speed = 0.5
         self.servo.move_duration = 2.5
@@ -313,9 +319,15 @@ class AGV():
         self.servo.move_duration = 1
         self.servo.robot_speed = 0.5
         if idx == 2:
-            self.servo.move("f")
+            self.servo.robot.forward(0.5) # 1.2초동안 전진하여 위치를 조정합니다.
+            time.sleep(1.2)
+            self.servo.robot.stop()
+            time.sleep(1.3)
         elif idx == 0:
-            self.servo.move("b")
+            self.servo.robot.backward(0.5) #  2초동안 후진하여 물건을 내려놓습닌다.
+            time.sleep(2.0)
+            self.servo.robot.stop()
+            time.sleep(1.3)
 
     def send_frame(self):
         while self.th_streaming_flag:
